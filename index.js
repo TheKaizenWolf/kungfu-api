@@ -120,9 +120,12 @@ const resolvers = {
     },
   },
   Mutation: {
-    addMovie: (obj, { movie }, context) => {
-      const newMoviesList = [...movies, movie];
-      return newMoviesList;
+    addMovie: (obj, { movie }, { userId }) => {
+      if (userId) {
+        const newMoviesList = [...movies, movie];
+        return newMoviesList;
+      }
+      return movies;
     },
   },
 };
@@ -132,6 +135,14 @@ const server = new ApolloServer({
   resolvers,
   introspection: true,
   playground: true,
+  context: ({ req }) => {
+    const fakeUser = {
+      userId: 'hello',
+    };
+    return {
+      ...fakeUser,
+    };
+  },
 });
 
 server.listen({ port: process.env.PORT || 4000 }).then(({ url }) => {
