@@ -32,10 +32,26 @@ const typeDefs = gql`
   }
 `;
 
+const actors = [
+  {
+    id: 'gordonyu',
+    name: 'Gordon Yu',
+  },
+  {
+    id: 'gordonliu',
+    name: 'Gordon Liu',
+  },
+];
+
 const movies = [
   {
     id: 'sdfasdgioasasik',
     title: '5 Deadly Venoms',
+    actor: [
+      {
+        id: 'gordonyu',
+      },
+    ],
     releaseDate: new Date('10-12-1983'),
     rating: 5,
   },
@@ -46,8 +62,7 @@ const movies = [
     rating: 5,
     actor: [
       {
-        id: 'asdgdasgdas',
-        name: 'Gordon Liu',
+        id: 'gordonliu',
       },
     ],
   },
@@ -77,6 +92,15 @@ const resolvers = {
       return null;
     },
   }),
+  Movie: {
+    actor: (obj, args, context) => {
+      const actorIds = obj.actor.map(actor => actor.id);
+      const filteredActors = actors.filter(actor =>
+        actorIds.includes(actor.id)
+      );
+      return filteredActors;
+    },
+  },
 };
 
 const server = new ApolloServer({
