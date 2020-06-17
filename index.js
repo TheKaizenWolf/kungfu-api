@@ -30,6 +30,10 @@ const typeDefs = gql`
     movies: [Movie]
     movie(id: ID): Movie
   }
+
+  type Mutation {
+    addMovie(id: ID, title: String!, releaseDate: Date): [Movie]
+  }
 `;
 
 const actors = [
@@ -99,6 +103,12 @@ const resolvers = {
         actorIds.includes(actor.id)
       );
       return filteredActors;
+    },
+  },
+  Mutation: {
+    addMovie: (obj, { id, title, releaseDate }, context) => {
+      const newMoviesList = [...movies, { id, title, releaseDate }];
+      return newMoviesList;
     },
   },
 };
