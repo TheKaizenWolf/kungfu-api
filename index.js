@@ -7,6 +7,26 @@ require('dotenv').config();
 mongoose.connect(process.env.MONGODB_KEY, { useNewUrlParser: true });
 const db = mongoose.connection;
 
+const movieSchema = new mongoose.Schema({
+  title: String,
+  releaseDate: Date,
+  rating: Number,
+  status: String,
+  actor: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Actor',
+  },
+});
+
+const actorSchema = new mongoose.Schema({
+  name: {
+    type: String,
+  },
+});
+
+const Movie = mongoose.model('Movie', movieSchema);
+const Actor = mongoose.model('Actor', actorSchema);
+
 // gql`` parses your string into an AST
 const typeDefs = gql`
   scalar Date
@@ -28,8 +48,8 @@ const typeDefs = gql`
     title: String!
     releaseDate: Date
     rating: Int
-    actor: [Actor]
     status: Status
+    actor: Actor
   }
 
   type Query {
@@ -38,19 +58,16 @@ const typeDefs = gql`
   }
 
   input ActorInput {
-    id: ID
     name: String
   }
 
   input MovieInput {
-    id: ID
     title: String
     releaseDate: Date
     rating: Int
-    actor: [ActorInput]
     status: Status
+    actor: ActorInput
   }
-
   type Mutation {
     addMovie(movie: MovieInput): [Movie]
   }
@@ -67,36 +84,14 @@ const actors = [
   },
 ];
 
-const movies = [
-  {
-    id: 'sdfasdgioasasik',
-    title: '5 Deadly Venoms',
-    actor: [
-      {
-        id: 'gordonyu',
-      },
-    ],
-    releaseDate: new Date('10-12-1983'),
-    rating: 5,
-  },
-  {
-    id: 'sgdasigsakgadios',
-    title: '36th Chamber',
-    releaseDate: new Date('10-10-1983'),
-    rating: 5,
-    actor: [
-      {
-        id: 'gordonliu',
-      },
-    ],
-  },
-];
-
 const resolvers = {
   Query: {
-    movies: () => movies,
-    movie: (obj, { id }, context) => {
-      const foundMovie = movies.find(movie => movie.id === id);
+    movies: async () => {
+      const allMovies = await Movie.find();
+      return allMovies;
+    },
+    movie: async (obj, { id }, context) => {
+      const foundMovie = await Movie.findById(id);
       return foundMovie;
     },
   },
@@ -106,32 +101,26 @@ const resolvers = {
     parseValue(value) {
       return new Date(value);
     },
-    serialize(value) {
-      return value.getTime();
-    },
-    parseLiteral(ast) {
-      if (ast.kind === Kind.INT) {
-        return new Date(ast.value);
-      }
-      return null;
-    },
   }),
   Movie: {
-    actor: (obj, args, context) => {
-      const actorIds = obj.actor.map(actor => actor.id);
-      const filteredActors = actors.filter(actor =>
-        actorIds.includes(actor.id)
-      );
-      return filteredActors;
+    actor: async (obj, { args }, context) => {
+      const foundActor = await Actor.findById(obj.actor);
+      return foundActor;
     },
   },
   Mutation: {
-    addMovie: (obj, { movie }, { userId }) => {
+    addMovie: async (obj, { movie }, { userId }) => {
       if (userId) {
-        const newMoviesList = [...movies, movie];
-        return newMoviesList;
+        const newActor = await Actor.create({ name: movie.actor.name });
+        const newMovie = await Movie.create({
+          ...movie,
+          actor: newActor._id,
+        });
+
+        return [newMovie];
       }
-      return movies;
+      const Movies = await Movie.find();
+      return Movies;
     },
   },
 };
