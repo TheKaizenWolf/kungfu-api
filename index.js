@@ -103,7 +103,7 @@ const resolvers = {
     },
   }),
   Movie: {
-    actor: async (obj, { args }, context) => {
+    actor: async (obj, args, context) => {
       const foundActor = await Actor.findById(obj.actor);
       return foundActor;
     },
