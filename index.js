@@ -1,6 +1,11 @@
 const { ApolloServer, gql } = require('apollo-server');
 const { GraphQLScalarType } = require('graphql');
 const { Kind } = require('graphql/language');
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+mongoose.connect(process.env.MONGODB_KEY, { useNewUrlParser: true });
+const db = mongoose.connection;
 
 // gql`` parses your string into an AST
 const typeDefs = gql`
@@ -144,6 +149,11 @@ const server = new ApolloServer({
       ...fakeUser,
     };
   },
+});
+
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+  console.log('database connected');
 });
 
 server.listen({ port: process.env.PORT || 4000 }).then(({ url }) => {
