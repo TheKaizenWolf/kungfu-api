@@ -1,4 +1,4 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql, PubSub } = require('apollo-server');
 const { GraphQLScalarType } = require('graphql');
 const { Kind } = require('graphql/language');
 const mongoose = require('mongoose');
@@ -21,6 +21,7 @@ const movieSchema = new mongoose.Schema({
 const actorSchema = new mongoose.Schema({
   name: {
     type: String,
+    unique: true,
   },
 });
 
@@ -71,6 +72,10 @@ const typeDefs = gql`
   type Mutation {
     addMovie(movie: MovieInput): [Movie]
   }
+
+  type Subscription {
+    movieAdded: Movie
+  }
 `;
 
 const actors = [
@@ -84,7 +89,15 @@ const actors = [
   },
 ];
 
+const pubsub = new PubSub();
+const MOVIE_ADDED = 'MOVIE_ADDED';
+
 const resolvers = {
+  Subscription: {
+    movieAdded: {
+      subscribe: () => pubsub.asyncIterator([MOVIE_ADDED]),
+    },
+  },
   Query: {
     movies: async () => {
       const allMovies = await Movie.find();
@@ -111,11 +124,16 @@ const resolvers = {
   Mutation: {
     addMovie: async (obj, { movie }, { userId }) => {
       if (userId) {
-        const newActor = await Actor.create({ name: movie.actor.name });
+        const newActor = await Actor.findOneAndUpdate(
+          { name: movie.actor.name },
+          { name: movie.actor.name },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
         const newMovie = await Movie.create({
           ...movie,
           actor: newActor._id,
         });
+        pubsub.publish(MOVIE_ADDED, { movieAdded: newMovie });
 
         return [newMovie];
       }
